@@ -31,33 +31,45 @@
 
 - **2단계 모델 아키텍처**: 분류 → 회귀의 계층적 접근
 - **2020~2025년 실제 데이터**: 16,368건의 경매 낙찰 데이터
-- **높은 예측 정확도**: MAE 0.0686 (평균 6.86%p 오차)
-- **그룹별 최적화**: 정상 그룹과 유찰 그룹에 특화된 모델
+- **높은 예측 정확도**: 전체 MAE 0.0713 (Baseline 대비 49.1% 개선)
+- **저가 구간 특화**: 저가 구간 MAE 53.4% 개선 (0.0805 → 0.0375)
 
 ---
 
 ## 🏆 주요 성과
 
-### 📊 **2025년 검증 성과**
+### 📊 **모델 성능 요약**
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-전체 MAE: 0.0686 (6.86%p 오차)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-분류 정확도: 97.0%
+[모델 발전 과정]
+  Baseline MAE:            0.1402
+  CatBoost MAE:            0.0753  (46.3% 개선)
+  Huber (PyCaret) MAE:     0.0717  (48.9% 개선)
+  Ensemble MAE:            0.0715  (Huber 0.8 + CatBoost 0.2)
+  2단계 모델 MAE:           0.0713  (49.1% 개선) ⭐
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-그룹별 성능:
-- 정상 그룹 (≥50%): MAE 0.0700
-- 유찰 그룹 (<50%): MAE 0.0401 ⭐
+[2단계 모델 상세]
+  분류 정확도:              96.9%
+  전체 MAE:                0.0713
+  저가 구간 MAE:            0.0375  (53.4% 개선) ⭐
+  고가 구간 MAE:            0.0733
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Within 5%p 정확도]
+  전체:    52.9%  (Baseline 49.7% → +3.2%p)
+  저가:    78.0%  (Baseline 25.7% → +52.3%p) ⭐
+  고가:    51.5%  (Baseline 51.1% → +0.4%p)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ### 🎯 **핵심 발견**
 
-- **최저가율**이 전체 예측의 **74.85%** 설명력 보유
-- 유찰 그룹에서 **53% 성능 향상** 달성
-- 2단계 접근으로 저가 물건 예측 정확도 대폭 개선
+- **최저가율**이 전체 예측의 **74.85%** 설명력 보유 (SHAP 분석)
+- 저가 구간(유찰)에서 **53.4% 성능 향상** 달성
+- 2단계 접근으로 저가 물건 Within 5%p 정확도 25.7% → 78.0% 대폭 개선
+- Ablation Study 결과: 24개 피처 중 4개(최저가율, 신건여부, 평당감정가, 유찰횟수)가 핵심
 
 ---
 
@@ -66,7 +78,7 @@
 ### 📁 데이터 구성
 
 | 연도 | 데이터 수 | 비율 |
-|------|----------|------|
+| --- | --- | --- |
 | 2020 | 1,281건 | 7.8% |
 | 2021 | 1,341건 | 8.2% |
 | 2022 | 1,331건 | 8.1% |
@@ -80,11 +92,13 @@
 > ⚠️ **대용량 파일**: 깃허브 용량 제한으로 원본 데이터와 모델은 별도 다운로드 필요
 
 **📊 전체 데이터셋 (17.3MB)**
+
 - [구글 드라이브 링크](https://drive.google.com/drive/folders/1DNmNjVMLzN-vOTQWUTISFF898WrMrV7p)
 - 파일명: `CSV-20260125T011313Z-1-001.zip`
 - 또는 `data/` 폴더의 README 참조
 
 **🤖 학습된 모델 파일 (13.7MB)**
+
 - [구글 드라이브 링크](https://drive.google.com/drive/folders/1DNmNjVMLzN-vOTQWUTISFF898WrMrV7p)
 - 필요 파일:
   - `2stage_classifier.pkl` (13.7MB) - Stage 1 분류 모델
@@ -93,19 +107,22 @@
 - 또는 `models/` 폴더의 README 참조
 
 **📦 샘플 데이터**
+
 - `data/sample_data.csv`: 100건 샘플 (테스트용)
 
 ### 🏷️ 주요 변수
 
 **타겟 변수**
+
 - `낙찰가율`: 낙찰가 / 감정가 (0.05 ~ 1.2 범위)
 
-**주요 피처**
+**주요 피처 (SHAP 중요도 순)**
+
 - `최저가율`: 최저가 / 감정가 (중요도 74.85% ⭐)
-- `감정가`, `최저가`, `낙찰가`
-- `구_encoded`, `동_encoded`: 위치 정보
-- `유찰횟수`, `신건여부`: 경매 이력
-- `용도`: 아파트, 다세대, 단독주택 등
+- `동_encoded`: 위치 정보 (4.49%)
+- `신건여부`: 경매 이력 (3.09%)
+- `감정가`: 감정 평가 금액 (2.63%)
+- `유찰횟수`: 유찰 이력 (2.13%)
 
 ---
 
@@ -130,6 +147,8 @@
 │  - n_estimators: 1000                   │
 │  - max_depth: 15                        │
 │  - class_weight: 'balanced'             │
+│                                          │
+│  성능: 96.9% 정확도 (Test)              │
 └─────────────────────────────────────────┘
                     │
           ┌─────────┴─────────┐
@@ -147,8 +166,8 @@
 │ epsilon: 1.35   │  │ epsilon: 1.1    │
 │ alpha: 0.0001   │  │ alpha: 0.0001   │
 │                  │  │                  │
-│ MAE: 0.0710     │  │ MAE: 0.0375     │
-│ (정상 그룹)      │  │ (저가 그룹)      │
+│ MAE: 0.0733     │  │ MAE: 0.0375     │
+│ (정상 그룹)      │  │ (저가 그룹) ⭐   │
 └──────────────────┘  └──────────────────┘
           │                   │
           └─────────┬─────────┘
@@ -156,21 +175,25 @@
           ┌──────────────────┐
           │  최종 예측 결합   │
           │                  │
-          │  전체 MAE: 0.0719│
+          │  전체 MAE: 0.0713│
           └──────────────────┘
 ```
 
-### 모델 특징
+### 모델 발전 과정
 
-**Stage 1: 분류 모델**
-- 알고리즘: Random Forest
-- 목적: 정상 vs 유찰 그룹 구분
-- 성능: 97.0% 정확도
+| 단계 | 모델 | MAE | 개선율 | 비고 |
+| --- | --- | --- | --- | --- |
+| 1 | Baseline | 0.1402 | - | 초기 모델 |
+| 2 | CatBoost | 0.0753 | 46.3% | AutoML 실험 |
+| 3 | Huber (PyCaret) | 0.0717 | 48.9% | PyCaret Tuned |
+| 4 | Ensemble | 0.0715 | 49.0% | Huber 0.8 + CatBoost 0.2 |
+| 5 | **2단계 모델** | **0.0713** | **49.1%** | **분류→회귀 최종** |
 
-**Stage 2: 회귀 모델**
-- 알고리즘: Huber Regressor (이상치 강건)
-- 목적: 그룹별 낙찰가율 예측
-- 특징: 그룹별 최적화된 epsilon 값
+### 추가 실험 (딥러닝)
+
+- Entity Embedding + Multi-Task Learning 시도
+- 결과: MAE 0.0823 (-15.1% 악화) → 채택하지 않음
+- 교훈: 데이터 규모(16K건)에서는 전통적 ML이 더 효과적
 
 ---
 
@@ -179,48 +202,33 @@
 ```
 seoul-auction-prediction/
 │
-├── README.md                           # 프로젝트 설명 (이 파일)
-├── .gitignore                         # Git 제외 파일 목록
-├── requirements.txt                    # Python 패키지 목록
-├── LICENSE                            # 라이선스
+├── README.md
+├── .gitignore
+├── requirements.txt
 │
-├── notebooks/                         # Jupyter 노트북
+├── notebooks/
 │   ├── 1_서울경매_데이터수집.ipynb      # 데이터 크롤링
 │   ├── 2_서울경매_전처리.ipynb          # 전처리 및 EDA
 │   └── 3_서울경매_모델링_최종.ipynb     # 모델 학습 및 평가
 │
-├── src/                               # 소스 코드
-│   ├── __init__.py
-│   ├── preprocessing.py               # 전처리 함수
-│   ├── model.py                       # 모델 클래스
-│   ├── evaluation.py                  # 평가 함수
-│   └── utils.py                       # 유틸리티 함수
-│
-├── data/                              # 데이터 폴더 (.gitignore)
+├── data/
 │   ├── README.md                      # 데이터 다운로드 가이드
 │   └── sample_data.csv                # 샘플 데이터 (100건)
 │
-├── models/                            # 학습된 모델 (.gitignore)
+├── models/
 │   ├── README.md                      # 모델 다운로드 가이드
 │   └── .gitkeep
 │
-├── results/                           # 결과 및 시각화
-│   ├── figures/                       # 그래프 이미지
-│   │   ├── 2stage_results_complete.png
-│   │   ├── confusion_matrices.png
-│   │   ├── error_distributions.png
-│   │   └── huber_shap_analysis.png
-│   ├── reports/                       # 분석 리포트
-│   │   ├── 성능_개선_전략.md
-│   │   ├── 통계적_가설_검증.md
-│   │   └── 모델_비교_분석.md
-│   └── validation/                    # 검증 결과
-│       └── 2025_validation_summary.csv
-│
-└── docs/                              # 문서
-    ├── 데이터_수집_가이드.md
-    ├── 모델_아키텍처_상세.md
-    └── API_문서.md
+└── results/
+    ├── figures/
+    │   ├── 2stage_results_complete.png
+    │   ├── confusion_matrices.png
+    │   ├── error_distributions.png
+    │   └── huber_shap_analysis.png
+    └── reports/
+        ├── 성능_개선_전략.md
+        ├── 통계적_가설_검증.md
+        └── 모델_비교_분석.md
 ```
 
 ---
@@ -230,7 +238,7 @@ seoul-auction-prediction/
 ### 1. 저장소 클론
 
 ```bash
-git clone https://github.com/your-username/seoul-auction-prediction.git
+git clone https://github.com/Aguantar/seoul-auction-prediction.git
 cd seoul-auction-prediction
 ```
 
@@ -249,7 +257,7 @@ pip install -r requirements.txt
 
 ### 4. 데이터 다운로드
 
-```bash
+```
 # data/README.md 참조하여 데이터 다운로드
 # 또는 샘플 데이터로 테스트
 ```
@@ -314,21 +322,25 @@ print(f"MAE: {mae:.4f}")
 ## 🛠️ 기술 스택
 
 ### 데이터 처리
+
 - **Pandas**: 데이터 조작
 - **NumPy**: 수치 연산
 - **Scikit-learn**: 전처리 및 모델링
 
 ### 머신러닝
+
 - **Scikit-learn**: RandomForest, HuberRegressor
 - **CatBoost**: 대체 모델 실험
 - **PyCaret**: AutoML 실험
 
 ### 시각화
+
 - **Matplotlib**: 기본 시각화
 - **Seaborn**: 통계 시각화
 - **SHAP**: 모델 해석
 
 ### 개발 환경
+
 - **Jupyter Notebook**: 인터랙티브 개발
 - **Google Colab**: 클라우드 실행
 - **Git**: 버전 관리
@@ -338,47 +350,28 @@ print(f"MAE: {mae:.4f}")
 ## 📈 향후 계획
 
 ### 단기 목표
-- [ ] Streamlit 대시보드 구축
-- [ ] REST API 개발
-- [ ] Docker 컨테이너화
-- [ ] CI/CD 파이프라인 구축
+
+- Streamlit 대시보드 구축
+- REST API 개발
+- Docker 컨테이너화
 
 ### 중기 목표
-- [ ] 딥러닝 모델 실험 (LSTM, Transformer)
-- [ ] 외부 데이터 통합 (경제 지표 등)
-- [ ] 실시간 예측 시스템 구축
+
+- 외부 데이터 통합 (경제 지표 등)
+- 실시간 예측 시스템 구축
 
 ### 장기 목표
-- [ ] 전국 확장 (서울 → 전국)
-- [ ] 모바일 앱 개발
-- [ ] 상업화 검토
+
+- 전국 확장 (서울 → 전국)
 
 ---
-
-
 
 ## 📧 문의
 
 프로젝트에 대한 질문이나 제안사항이 있으시면 이슈를 등록해주세요.
 
-- **GitHub Issues**: [이슈 등록하기](https://github.com/your-username/seoul-auction-prediction/issues)
+- **GitHub Issues**: [이슈 등록하기](https://github.com/Aguantar/seoul-auction-prediction/issues)
 
 ---
-
-## 🙏 감사의 말
-
-이 프로젝트는 다음 리소스들을 참고하여 개발되었습니다:
-
-- [Scikit-learn Documentation](https://scikit-learn.org/)
-- [SHAP Documentation](https://shap.readthedocs.io/)
-- [서울 경매 데이터 출처]
-
----
-
-<div align="center">
 
 **⭐ 프로젝트가 도움이 되셨다면 Star를 눌러주세요! ⭐**
-
-Made with ❤️ by [Your Name]
-
-</div>
